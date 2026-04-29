@@ -1,0 +1,4 @@
+<resources>
+
+    <style name="Theme.StreamfilxandroidTV" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

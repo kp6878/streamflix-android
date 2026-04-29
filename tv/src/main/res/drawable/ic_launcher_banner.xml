@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+
+    <!-- Black background -->
+    <path
+        android:fillColor="#141414"
+        android:pathData="M0,0h320v180h-320z" />
+
+    <!-- Red left accent bar -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M0,0h6v180h-6z" />
+
+    <!-- Red circle (logo area) -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M90,90 m-44,0 a44,44 0 1,0 88,0 a44,44 0 1,0 -88,0" />
+
+    <!-- White play triangle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M76,67 L114,90 L76,113 Z" />
+
+    <!-- Content library bars (right side) -->
+    <path android:fillColor="#2A2A2A" android:pathData="M158,44h144v10h-144z" />
+    <path android:fillColor="#2A2A2A" android:pathData="M158,64h124v10h-124z" />
+    <path android:fillColor="#E50914" android:pathData="M158,84h104v10h-104z" />
+    <path android:fillColor="#2A2A2A" android:pathData="M158,104h134v10h-134z" />
+    <path android:fillColor="#2A2A2A" android:pathData="M158,124h114v10h-114z" />
+
+    <!-- Small red dot accent -->
+    <path
+        android:fillColor="#E50914"
+        android:pathData="M148,89 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+</vector>
