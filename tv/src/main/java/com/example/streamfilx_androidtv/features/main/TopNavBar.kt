@@ -1,6 +1,8 @@
 package com.example.streamfilx_androidtv.features.main
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -11,22 +13,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.TextButton
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
-import androidx.compose.material3.TextButton
 import com.example.streamfilx_androidtv.navigation.Screen
 
 data class NavTab(
@@ -50,10 +55,18 @@ fun TopNavBar(
     onTabSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Focus the currently selected tab when the nav bar is composed / re-shown
+    val selectedIndex = TOP_NAV_TABS.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
+    val focusRequesters = remember { List(TOP_NAV_TABS.size) { FocusRequester() } }
+
+    LaunchedEffect(currentRoute) {
+        focusRequesters[selectedIndex].requestFocus()
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(72.dp)
             .background(Color.Black.copy(alpha = 0.95f)),
         contentAlignment = Alignment.CenterStart,
     ) {
@@ -74,10 +87,11 @@ fun TopNavBar(
                 modifier = Modifier.padding(end = 24.dp),
             )
 
-            TOP_NAV_TABS.forEach { tab ->
+            TOP_NAV_TABS.forEachIndexed { index, tab ->
                 NavTabItem(
                     label = tab.label,
                     isSelected = currentRoute == tab.route,
+                    focusRequester = focusRequesters[index],
                     onClick = { onTabSelected(tab.route) },
                 )
             }
@@ -90,54 +104,55 @@ fun TopNavBar(
 private fun NavTabItem(
     label: String,
     isSelected: Boolean,
+    focusRequester: FocusRequester,
     onClick: () -> Unit,
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
     val textColor by animateColorAsState(
         targetValue = when {
-            isSelected -> Color.White
-            isFocused -> Color.White
+            isSelected || isFocused -> Color.White
             else -> Color.White.copy(alpha = 0.6f)
         },
         animationSpec = tween(150),
         label = "tabColor",
     )
 
-    val underlineColor = Color(0xFFE50914)
+    val pillAlpha by animateFloatAsState(
+        targetValue = when {
+            isSelected -> 1f
+            isFocused -> 0.6f
+            else -> 0f
+        },
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "pillAlpha",
+    )
+
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1f,
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "tabScale",
+    )
 
     Box(
         modifier = Modifier
+            .focusRequester(focusRequester)
             .onFocusChanged { isFocused = it.isFocused }
-            .drawBehind {
-                if (isSelected) {
-                    // Red underline for selected tab
-                    drawLine(
-                        color = underlineColor,
-                        start = Offset(0f, size.height - 2.dp.toPx()),
-                        end = Offset(size.width, size.height - 2.dp.toPx()),
-                        strokeWidth = 2.dp.toPx(),
-                    )
-                }
-                if (isFocused && !isSelected) {
-                    // Subtle underline when focused but not selected
-                    drawLine(
-                        color = Color.White.copy(alpha = 0.4f),
-                        start = Offset(0f, size.height - 2.dp.toPx()),
-                        end = Offset(size.width, size.height - 2.dp.toPx()),
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                }
-            },
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Color(0xFFE50914).copy(alpha = pillAlpha * if (isSelected) 1f else 0.35f),
+                RoundedCornerShape(20.dp),
+            ),
     ) {
         TextButton(
             onClick = onClick,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 4.dp),
         ) {
             Text(
                 text = label,
                 color = textColor,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             )
         }

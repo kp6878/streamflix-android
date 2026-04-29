@@ -1,14 +1,17 @@
 package com.example.streamfilx_androidtv.features.browse
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,9 +19,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,13 +30,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.tv.foundation.lazy.list.TvLazyRow
+import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -105,6 +114,13 @@ private fun FilterBar(
     onTypeSelected: (String) -> Unit,
     onGenreSelected: (String?) -> Unit,
 ) {
+    // Auto-focus the selected type chip on composition
+    val typeChipFocusRequesters = remember { listOf(FocusRequester(), FocusRequester()) }
+    val selectedTypeIndex = if (selectedType == "movie") 0 else 1
+    LaunchedEffect(Unit) {
+        typeChipFocusRequesters[selectedTypeIndex].requestFocus()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -114,33 +130,36 @@ private fun FilterBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 48.dp),
+                .padding(horizontal = 32.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Type toggle
-            listOf("movie" to "Movies", "series" to "Series").forEach { (type, label) ->
+            listOf("movie" to "Movies", "series" to "Series").forEachIndexed { index, (type, label) ->
                 TypeChip(
                     label = label,
                     isSelected = selectedType == type,
+                    focusRequester = typeChipFocusRequesters[index],
                     onClick = { onTypeSelected(type) },
                 )
             }
 
             Spacer(Modifier.width(16.dp))
 
-            // Genre chips — horizontally scrollable
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            // Genre chips — horizontally scrollable via TvLazyRow
+            TvLazyRow(
+                contentPadding = PaddingValues(horizontal = 0.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 // "All" chip
-                GenreChip(
-                    label = "All",
-                    isSelected = selectedGenre == null,
-                    onClick = { onGenreSelected(null) },
-                )
-                GENRES.forEach { genre ->
+                item(key = "genre_all") {
+                    GenreChip(
+                        label = "All",
+                        isSelected = selectedGenre == null,
+                        onClick = { onGenreSelected(null) },
+                    )
+                }
+                items(GENRES, key = { it }) { genre ->
                     GenreChip(
                         label = genre,
                         isSelected = selectedGenre == genre,
@@ -154,8 +173,14 @@ private fun FilterBar(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun TypeChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun TypeChip(
+    label: String,
+    isSelected: Boolean,
+    focusRequester: FocusRequester,
+    onClick: () -> Unit,
+) {
     var isFocused by remember { mutableStateOf(false) }
+
     val bg by animateColorAsState(
         targetValue = when {
             isSelected -> Color(0xFFE50914)
@@ -166,8 +191,24 @@ private fun TypeChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
         label = "typeBg",
     )
 
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1f,
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "typeScale",
+    )
+
     Box(
         modifier = Modifier
+            .focusRequester(focusRequester)
+            .onFocusChanged { isFocused = it.isFocused }
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .shadow(if (isFocused) 6.dp else 0.dp, RoundedCornerShape(20.dp))
+            .then(
+                if (isFocused)
+                    Modifier.border(2.dp, Color(0xFFE50914), RoundedCornerShape(20.dp))
+                else
+                    Modifier
+            )
             .clip(RoundedCornerShape(20.dp))
             .background(bg)
             .clickable(
@@ -175,14 +216,13 @@ private fun TypeChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
                 indication = null,
                 onClick = onClick,
             )
-            .onFocusChanged { isFocused = it.isFocused }
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
             color = if (isSelected || isFocused) Color.White else Color.White.copy(alpha = 0.6f),
-            fontSize = 14.sp,
+            fontSize = 16.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
@@ -192,28 +232,31 @@ private fun TypeChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun GenreChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isSelected -> Color(0xFFE50914)
-            isFocused -> Color.White.copy(alpha = 0.5f)
-            else -> Color(0xFF333333)
-        },
-        animationSpec = tween(150),
-        label = "genreBorder",
+
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1f,
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "genreScale",
     )
 
     Box(
         modifier = Modifier
+            .onFocusChanged { isFocused = it.isFocused }
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .shadow(if (isFocused) 6.dp else 0.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) Color(0xFFE50914).copy(alpha = 0.15f) else Color.Transparent)
             .then(
-                Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onClick,
-                )
+                if (isFocused)
+                    Modifier.border(2.dp, Color(0xFFE50914), RoundedCornerShape(16.dp))
+                else
+                    Modifier
             )
-            .onFocusChanged { isFocused = it.isFocused }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
         Text(
@@ -230,14 +273,28 @@ private fun GenreChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
 private fun BrowseErrorState(message: String, onRetry: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "Couldn't load content", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = "Couldn't load content",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(Modifier.height(8.dp))
-            Text(text = message, color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+            Text(
+                text = message,
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 16.sp,
+            )
             Spacer(Modifier.height(20.dp))
             Button(
                 onClick = onRetry,
-                colors = ButtonDefaults.colors(containerColor = Color(0xFFE50914), contentColor = Color.White),
-            ) { Text("Try Again") }
+                colors = ButtonDefaults.colors(
+                    containerColor = Color(0xFFE50914),
+                    contentColor = Color.White,
+                ),
+            ) {
+                Text("Try Again", fontSize = 16.sp)
+            }
         }
     }
 }

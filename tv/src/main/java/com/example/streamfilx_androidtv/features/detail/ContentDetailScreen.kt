@@ -18,12 +18,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.tv.foundation.lazy.list.TvLazyRow
+import androidx.tv.foundation.lazy.list.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -155,7 +159,7 @@ private fun DetailContent(
     onSeasonSelect: (Int) -> Unit,
     onItemClick: (MetaPreview) -> Unit,
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    TvLazyColumn(modifier = Modifier.fillMaxSize()) {
         // Hero
         item(key = "hero") {
             HeroSection(
@@ -204,7 +208,7 @@ private fun DetailContent(
                 )
             }
             item(key = "more_row") {
-                LazyRow(
+                TvLazyRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(horizontal = ROW_HORIZONTAL_PADDING),
                 ) {
@@ -229,6 +233,9 @@ private fun HeroSection(
     onDownloadClick: () -> Unit,
     onToggleFavorite: () -> Unit,
 ) {
+    val playFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { playFocusRequester.requestFocus() }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -311,6 +318,7 @@ private fun HeroSection(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = onPlayClick,
+                    modifier = Modifier.focusRequester(playFocusRequester),
                     colors = ButtonDefaults.colors(
                         containerColor = Color.White,
                         contentColor = Color.Black,
@@ -372,7 +380,7 @@ private fun CastRow(cast: List<String>) {
     Column(modifier = Modifier.padding(start = ROW_HORIZONTAL_PADDING, top = 24.dp)) {
         Text("Cast", color = Color(0xFFB3B3B3), fontSize = 14.sp)
         Spacer(Modifier.height(8.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TvLazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(cast.take(10)) { name ->
                 Box(
                     modifier = Modifier
@@ -395,7 +403,7 @@ private fun SeasonPicker(
     selectedSeason: Int?,
     onSeasonSelect: (Int) -> Unit,
 ) {
-    LazyRow(
+    TvLazyRow(
         modifier = Modifier.padding(start = ROW_HORIZONTAL_PADDING, top = 28.dp, bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -446,17 +454,20 @@ private fun EpisodeList(episodes: List<Video>, onEpisodeClick: (Video) -> Unit) 
 private fun EpisodeRow(episode: Video, onClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
 
+    androidx.tv.material3.Card(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { isFocused = it.isFocused },
+        shape = androidx.tv.material3.CardDefaults.shape(RoundedCornerShape(8.dp)),
+        colors = androidx.tv.material3.CardDefaults.colors(
+            containerColor = Color(0xFF1A1A1A),
+            focusedContainerColor = Color(0xFF2A2A2A),
+        ),
+    ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isFocused) Color(0xFF1F1F1F) else Color.Transparent)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            )
-            .onFocusChanged { isFocused = it.isFocused }
             .padding(12.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -521,6 +532,7 @@ private fun EpisodeRow(episode: Video, onClick: () -> Unit) {
             }
         }
     }
+    } // Card
 }
 
 // ── NowPlayingItem builder ────────────────────────────────────────────────────

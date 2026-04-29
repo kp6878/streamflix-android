@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.tv.foundation.lazy.list.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -134,7 +134,7 @@ fun SettingsScreen(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun SettingsHub(onSection: (SettingsSection) -> Unit, onSignOut: () -> Unit, userEmail: String?) {
-    LazyColumn(
+    TvLazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -214,7 +214,7 @@ private fun AccountsSection(
     onBack: () -> Unit,
     onSignedOut: () -> Unit,
 ) {
-    LazyColumn(
+    TvLazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -322,7 +322,7 @@ private fun AccountsSection(
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun PlaybackSection(state: SettingsUiState, vm: SettingsViewModel, onBack: () -> Unit) {
-    LazyColumn(
+    TvLazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -398,7 +398,7 @@ private fun PlaybackSection(state: SettingsUiState, vm: SettingsViewModel, onBac
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 private fun StorageSection(state: SettingsUiState, vm: SettingsViewModel, onBack: () -> Unit) {
-    LazyColumn(
+    TvLazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -462,7 +462,7 @@ private fun AddonsSection(state: SettingsUiState, vm: SettingsViewModel, onBack:
         }
     }
 
-    LazyColumn(
+    TvLazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -590,7 +590,7 @@ private fun AboutSection(
         )
     }
 
-    LazyColumn(
+    TvLazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

@@ -4,14 +4,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.foundation.lazy.list.TvLazyRow
+import androidx.tv.foundation.lazy.list.items
+import androidx.tv.foundation.lazy.list.rememberTvLazyListState
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import com.example.streamfilx_androidtv.core.models.WatchHistoryItem
@@ -22,25 +27,41 @@ fun ContinueWatchingRow(
     items: List<WatchHistoryItem>,
     onItemClick: (WatchHistoryItem) -> Unit,
     modifier: Modifier = Modifier,
+    requestInitialFocus: Boolean = false,
 ) {
     if (items.isEmpty()) return
+
+    val listState = rememberTvLazyListState()
+    val firstItemFocusRequester = remember { FocusRequester() }
+
+    if (requestInitialFocus) {
+        LaunchedEffect(Unit) {
+            firstItemFocusRequester.requestFocus()
+        }
+    }
 
     Column(modifier = modifier) {
         Text(
             text = "Continue Watching",
             color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 32.dp, bottom = 12.dp),
         )
-        LazyRow(
+        TvLazyRow(
+            state = listState,
             contentPadding = PaddingValues(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             items(items, key = { it.uniqueId }) { item ->
+                val isFirst = items.indexOf(item) == 0
                 WatchHistoryCard(
                     item = item,
                     onClick = { onItemClick(item) },
+                    modifier = if (isFirst && requestInitialFocus)
+                        Modifier.focusRequester(firstItemFocusRequester)
+                    else
+                        Modifier,
                 )
             }
         }

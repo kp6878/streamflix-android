@@ -1,22 +1,27 @@
 package com.example.streamfilx_androidtv.features.profile
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Icon
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -32,12 +40,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.tv.foundation.lazy.list.TvLazyRow
+import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import com.example.streamfilx_androidtv.services.AvatarGradients
 import com.example.streamfilx_androidtv.services.Profile
+
+private val DARK_BG   = Color(0xFF0A0A0A)
+private val ACCENT    = Color(0xFFE50914)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -47,23 +60,31 @@ fun ProfilePickerScreen(
     onEditProfile: (String) -> Unit,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
-    val profiles by viewModel.profiles.collectAsState()
+    val profiles  by viewModel.profiles.collectAsState()
     val canAddMore by viewModel.canAddMore.collectAsState()
     var isEditMode by remember { mutableStateOf(false) }
+
+    // Focus the first card automatically
+    val firstCardFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(profiles) {
+        if (profiles.isNotEmpty()) {
+            firstCardFocusRequester.requestFocus()
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(DARK_BG),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 900.dp)
-                .padding(horizontal = 40.dp),
+                .fillMaxWidth()
+                .padding(horizontal = 48.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Header row
+            // Header
             Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = if (isEditMode) "Manage Profiles" else "Who's Watching?",
@@ -86,13 +107,13 @@ fun ProfilePickerScreen(
 
             Spacer(Modifier.height(48.dp))
 
-            // Profile cards row — use TV Card so D-pad + OK button work
-            Row(
+            // Profile cards in a horizontally scrollable TvLazyRow
+            TvLazyRow(
                 horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.Top,
+                contentPadding = PaddingValues(horizontal = 16.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                profiles.forEach { profile ->
+                itemsIndexed(profiles) { index, profile ->
                     ProfileCard(
                         profile = profile,
                         isEditMode = isEditMode,
@@ -100,10 +121,15 @@ fun ProfilePickerScreen(
                             if (isEditMode) onEditProfile(profile.id)
                             else onProfileSelected(profile)
                         },
+                        modifier = if (index == 0) Modifier.focusRequester(firstCardFocusRequester) else Modifier,
                     )
                 }
+
+                // "Add Profile" card at the end
                 if (!isEditMode && canAddMore) {
-                    AddProfileCard(onClick = onCreateProfile)
+                    item {
+                        AddProfileCard(onClick = onCreateProfile)
+                    }
                 }
             }
         }
@@ -112,16 +138,31 @@ fun ProfilePickerScreen(
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-private fun ProfileCard(profile: Profile, isEditMode: Boolean, onClick: () -> Unit) {
+private fun ProfileCard(
+    profile: Profile,
+    isEditMode: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var isFocused by remember { mutableStateOf(false) }
     val gradientColors = AvatarGradients.colors(profile.avatarGradient)
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // TV Card handles D-pad focus + OK button natively
+    // Animate scale: 1.12f when focused, 1.0f otherwise
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.12f else 1.0f,
+        animationSpec = tween(durationMillis = 150),
+        label = "profile-card-scale",
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
+    ) {
         Card(
             onClick = onClick,
             modifier = Modifier
-                .size(112.dp)
+                .size(width = 120.dp, height = 140.dp)
+                .scale(scale)
                 .onFocusChanged { isFocused = it.isFocused },
             shape = CardDefaults.shape(CircleShape),
             colors = CardDefaults.colors(containerColor = Color.Transparent),
@@ -129,9 +170,10 @@ private fun ProfileCard(profile: Profile, isEditMode: Boolean, onClick: () -> Un
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    // 2dp red border on focus, transparent otherwise
                     .border(
-                        width = 3.dp,
-                        color = if (isFocused) Color.White else Color.Transparent,
+                        width = if (isFocused) 2.dp else 0.dp,
+                        color = if (isFocused) ACCENT else Color.Transparent,
                         shape = CircleShape,
                     )
                     .clip(CircleShape)
@@ -173,7 +215,7 @@ private fun ProfileCard(profile: Profile, isEditMode: Boolean, onClick: () -> Un
         )
         if (profile.isKidsProfile) {
             Spacer(Modifier.height(2.dp))
-            Text(text = "Kids", color = Color(0xFFE50914), fontSize = 12.sp)
+            Text(text = "Kids", color = ACCENT, fontSize = 12.sp)
         }
     }
 }
@@ -182,16 +224,19 @@ private fun ProfileCard(profile: Profile, isEditMode: Boolean, onClick: () -> Un
 @Composable
 private fun AddProfileCard(onClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
-    val borderColor by animateColorAsState(
-        targetValue = if (isFocused) Color.White else Color(0xFF444444),
-        label = "border",
+
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.12f else 1.0f,
+        animationSpec = tween(durationMillis = 150),
+        label = "add-card-scale",
     )
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Card(
             onClick = onClick,
             modifier = Modifier
-                .size(112.dp)
+                .size(width = 120.dp, height = 140.dp)
+                .scale(scale)
                 .onFocusChanged { isFocused = it.isFocused },
             shape = CardDefaults.shape(CircleShape),
             colors = CardDefaults.colors(containerColor = Color(0xFF1F1F1F)),
@@ -199,14 +244,18 @@ private fun AddProfileCard(onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .border(3.dp, borderColor, CircleShape),
+                    .border(
+                        width = if (isFocused) 2.dp else 1.dp,
+                        color = if (isFocused) ACCENT else Color(0xFF444444),
+                        shape = CircleShape,
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "+",
-                    color = Color(0xFFB3B3B3),
-                    fontSize = 44.sp,
-                    fontWeight = FontWeight.Light,
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add Profile",
+                    tint = if (isFocused) Color.White else Color(0xFFB3B3B3),
+                    modifier = Modifier.size(44.dp),
                 )
             }
         }

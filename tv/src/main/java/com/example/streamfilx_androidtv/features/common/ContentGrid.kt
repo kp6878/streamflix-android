@@ -1,11 +1,14 @@
 package com.example.streamfilx_androidtv.features.common
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,26 +22,32 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Text
 import com.example.streamfilx_androidtv.core.models.MetaPreview
 import com.example.streamfilx_androidtv.features.home.ContentCard
 
 private const val LOAD_MORE_THRESHOLD = 10
+private val GRID_CARD_SHAPE = RoundedCornerShape(12.dp)
+private val ACCENT_COLOR = Color(0xFFE50914)
 
 @Composable
 private fun adaptiveGridColumns(): Int {
@@ -89,7 +98,7 @@ fun ContentGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = gridState,
-        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
+        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
         modifier = modifier.fillMaxSize(),
@@ -109,7 +118,7 @@ fun ContentGrid(
                         .height(56.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = Color(0xFFE50914))
+                    CircularProgressIndicator(color = ACCENT_COLOR)
                 }
             }
         }
@@ -130,7 +139,7 @@ fun ShimmerContentGrid(modifier: Modifier = Modifier) {
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(adaptiveGridColumns()),
-        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
+        contentPadding = PaddingValues(horizontal = 32.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
         modifier = modifier.fillMaxSize(),
@@ -141,7 +150,7 @@ fun ShimmerContentGrid(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .width(160.dp)
                     .height(240.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(GRID_CARD_SHAPE)
                     .background(Color.White.copy(alpha = alpha)),
             )
         }

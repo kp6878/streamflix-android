@@ -1,11 +1,11 @@
 package com.example.streamfilx_androidtv.features.home
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,9 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +46,8 @@ import kotlinx.coroutines.delay
 
 private val BANNER_HEIGHT = 420.dp
 private const val AUTO_ADVANCE_MS = 7_000L
+private val ACCENT_COLOR = Color(0xFFE50914)
+private val BUTTON_SHAPE = RoundedCornerShape(6.dp)
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -69,15 +73,24 @@ fun HeroBanner(
             .fillMaxWidth()
             .height(BANNER_HEIGHT),
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+        // Use Crossfade for smooth hero item transitions
+        Crossfade(
+            targetState = pagerState.currentPage,
+            animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+            label = "heroCrossfade",
         ) { page ->
-            HeroBannerPage(
-                meta = items[page],
-                onPlayClick = { onPlayClick(items[page]) },
-                onDetailClick = { onItemClick(items[page]) },
-            )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+            ) { pagerPage ->
+                if (pagerPage == page) {
+                    HeroBannerPage(
+                        meta = items[pagerPage],
+                        onPlayClick = { onPlayClick(items[pagerPage]) },
+                        onDetailClick = { onItemClick(items[pagerPage]) },
+                    )
+                }
+            }
         }
 
         // Page indicator dots — bottom center
@@ -94,7 +107,7 @@ fun HeroBanner(
                         .width(if (isSelected) 20.dp else 6.dp)
                         .height(6.dp)
                         .background(
-                            if (isSelected) Color(0xFFE50914) else Color.White.copy(alpha = 0.4f),
+                            if (isSelected) ACCENT_COLOR else Color.White.copy(alpha = 0.4f),
                             RoundedCornerShape(3.dp),
                         ),
                 )
@@ -164,20 +177,20 @@ private fun HeroBannerPage(
             // Metadata row — year · rating · genres
             Row(verticalAlignment = Alignment.CenterVertically) {
                 meta.year?.let {
-                    Text(it, color = Color.White.copy(alpha = 0.8f), fontSize = 15.sp)
+                    Text(it, color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
                 }
                 meta.imdbRating?.let {
                     if (meta.year != null) {
                         Text(
                             text = " · ",
                             color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                         )
                     }
                     Text(
                         text = "★ $it",
                         color = Color(0xFFFFD700),
-                        fontSize = 15.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -186,7 +199,7 @@ private fun HeroBannerPage(
                         Text(
                             text = " · ${genres.joinToString(", ")}",
                             color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                         )
                     }
                 }
@@ -208,34 +221,77 @@ private fun HeroBannerPage(
 
             // Action buttons
             Row {
-                Button(
+                HeroButton(
+                    label = "▶  Play",
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    focusedContainerColor = ACCENT_COLOR,
+                    focusedContentColor = Color.White,
                     onClick = onPlayClick,
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.White,
-                        contentColor = Color.Black,
-                        focusedContainerColor = Color(0xFFE50914),
-                        focusedContentColor = Color.White,
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(6.dp)),
-                ) {
-                    Text("▶  Play", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                }
+                )
 
                 Spacer(Modifier.width(12.dp))
 
-                Button(
+                HeroButton(
+                    label = "More Info",
+                    containerColor = Color.White.copy(alpha = 0.15f),
+                    contentColor = Color.White,
+                    focusedContainerColor = Color.White.copy(alpha = 0.25f),
+                    focusedContentColor = Color.White,
                     onClick = onDetailClick,
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.White.copy(alpha = 0.15f),
-                        contentColor = Color.White,
-                        focusedContainerColor = Color.White.copy(alpha = 0.25f),
-                        focusedContentColor = Color.White,
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(6.dp)),
-                ) {
-                    Text("More Info", fontWeight = FontWeight.Medium, fontSize = 15.sp)
-                }
+                )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+private fun HeroButton(
+    label: String,
+    containerColor: Color,
+    contentColor: Color,
+    focusedContainerColor: Color,
+    focusedContentColor: Color,
+    onClick: () -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1f,
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "heroBtnScale",
+    )
+
+    val elevation by animateFloatAsState(
+        targetValue = if (isFocused) 8f else 2f,
+        animationSpec = tween(180, easing = FastOutSlowInEasing),
+        label = "heroBtnElevation",
+    )
+
+    Box(
+        modifier = Modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .shadow(elevation.dp, BUTTON_SHAPE)
+            .then(
+                if (isFocused)
+                    Modifier.border(2.dp, ACCENT_COLOR, BUTTON_SHAPE)
+                else
+                    Modifier
+            )
+            .onFocusChanged { isFocused = it.isFocused },
+    ) {
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.colors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+                focusedContainerColor = focusedContainerColor,
+                focusedContentColor = focusedContentColor,
+            ),
+            shape = ButtonDefaults.shape(BUTTON_SHAPE),
+        ) {
+            Text(label, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         }
     }
 }
